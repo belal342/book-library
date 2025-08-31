@@ -1,0 +1,71 @@
+1. Overall Layout Structure
+
+The web application follows a modern, clean design with a responsive layout. The main container uses a max-width to ensure content remains readable on larger screens while being fully responsive on mobile devices.
+
+2. Header Section
+
+Fixed header at the top with app branding
+Dark mode toggle button in the top-right corner
+Clean, minimal design with subtle shadow for depth
+Responsive padding that adjusts based on screen size
+3. Search Component
+
+Prominent search bar centered at the top of the content area
+Clean input field with search icon
+Filter dropdown buttons for refining search (author, category)
+Animated transition effects for interactive elements
+Clear button to reset search
+4. Book Grid Layout
+
+Responsive grid system using CSS Grid
+Grid adjusts columns based on viewport width:
+1 column on mobile
+2 columns on tablet
+4 columns on desktop
+Consistent gap spacing between grid items
+Smooth loading transitions
+5. Book Card Design
+
+Clean card design with subtle hover effects
+Book cover image with consistent aspect ratio
+Title and author information below image
+Favorite button with heart icon
+Loading skeleton placeholder while images load
+6. Book Details Modal
+
+Centered modal overlay with semi-transparent background
+Responsive width with max-width constraint
+Close button in top-right corner
+Structured content layout:
+Large book cover image
+Title and author information
+Publication details
+Description with proper text formatting
+Rating display
+Add to favorites button
+7. Loading States
+
+Skeleton loading cards while fetching data
+Subtle animation for loading states
+Maintains grid layout during loading
+Smooth transition when content loads
+8. Error States
+
+Centered error message with icon
+Clear error message text
+Retry button when applicable
+Maintains consistent layout spacing
+9. Responsive Design Considerations
+
+Fluid typography using relative units
+Adaptive spacing using responsive padding/margin
+Flexible grid system
+Modal adjusts for mobile viewing
+Touch-friendly interaction areas on mobile
+10. Visual Design Elements
+
+Consistent color scheme throughout
+Clear visual hierarchy
+Proper spacing and alignment
+Smooth transitions and animations
+Dark mode color palette consideration
