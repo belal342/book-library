@@ -1,328 +1,124 @@
-// import React, { useState, useEffect, useCallback } from 'react';
-// import SearchBar from './components/SearchBar';
-// import BookList from './components/BookList';
-// import BookDetails from './components/BookDetails';
-// import LoadingSpinner from './components/LoadingSpinner';
-// import ErrorDisplay from './components/ErrorDisplay';
-// import Pagination from './components/Pagination';
-// import { BookOpen, Sun, Moon, Heart } from 'lucide-react';
-// const App = () => {
-//   const [books, setBooks] = useState([]);
-//   const [loading, setLoading] = useState(false);
-//   const [error, setError] = useState(null);
-//   const [searchQuery, setSearchQuery] = useState('');
-//   const [selectedBook, setSelectedBook] = useState(null);
-//   const [favorites, setFavorites] = useState([]);
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const [totalItems, setTotalItems] = useState(0);
-//   const [searchFilter, setSearchFilter] = useState('all');
-//   const [darkMode, setDarkMode] = useState(false);
-//   const [hasSearched, setHasSearched] = useState(false);
-
-//   const itemsPerPage = 12;
-
-//   // Load favorites and theme from memory on mount
-//   useEffect(() => {
-//     const savedFavorites = JSON.parse(sessionStorage.getItem('bookFavorites') || '[]');
-//     const savedTheme = sessionStorage.getItem('bookLibraryTheme') === 'dark';
-//     setFavorites(savedFavorites);
-//     setDarkMode(savedTheme);
-//   }, []);
-
-//   // Save favorites to memory
-//   useEffect(() => {
-//     sessionStorage.setItem('bookFavorites', JSON.stringify(favorites));
-//   }, [favorites]);
-
-//   // Save theme to memory
-//   useEffect(() => {
-//     sessionStorage.setItem('bookLibraryTheme', darkMode ? 'dark' : 'light');
-//   }, [darkMode]);
-
-//   // Search books using Google Books API
-//   const searchBooks = useCallback(async (query, page = 1, filter = 'all') => {
-//     if (!query.trim()) return;
-    
-//     setLoading(true);
-//     setError(null);
-//     setHasSearched(true);
-
-//     try {
-//       let searchTerm = query;
-//       if (filter === 'author') {
-//         searchTerm = `inauthor:${query}`;
-//       } else if (filter === 'title') {
-//         searchTerm = `intitle:${query}`;
-//       }
-
-//       const startIndex = (page - 1) * itemsPerPage;
-//       const response = await fetch(
-//         `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchTerm)}&startIndex=${startIndex}&maxResults=${itemsPerPage}&orderBy=relevance`
-//       );
-
-//       if (!response.ok) {
-//         throw new Error('Failed to fetch books');
-//       }
-
-//       const data = await response.json();
-//       setBooks(data.items || []);
-//       setTotalItems(data.totalItems || 0);
-//       setCurrentPage(page);
-//     } catch (err) {
-//       setError(err.message);
-//       setBooks([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   }, [itemsPerPage]);
-
-//   // Handle search
-//   const handleSearch = (query, filter = searchFilter) => {
-//     setSearchQuery(query);
-//     setSearchFilter(filter);
-//     setCurrentPage(1);
-//     searchBooks(query, 1, filter);
-//   };
-
-//   // Handle pagination
-//   const handlePageChange = (page) => {
-//     searchBooks(searchQuery, page, searchFilter);
-//   };
-
-//   // Toggle favorite
-//   const toggleFavorite = (book) => {
-//     const bookId = book.id;
-//     setFavorites(prev => {
-//       if (prev.find(fav => fav.id === bookId)) {
-//         return prev.filter(fav => fav.id !== bookId);
-//       } else {
-//         return [...prev, book];
-//       }
-//     });
-//   };
-
-//   // Check if book is favorite
-//   const isFavorite = (bookId) => {
-//     return favorites.some(fav => fav.id === bookId);
-//   };
-
-//   const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-//   return (
-//     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-//       {/* Header */}
-//       <header className={`sticky top-0 z-40 shadow-sm border-b transition-colors duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-//         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-//           <div className="flex items-center justify-between">
-//             <div className="flex items-center space-x-3">
-//               <BookOpen className="w-8 h-8 text-blue-600" />
-//               <h1 className="text-2xl font-bold">Book Library</h1>
-//             </div>
-            
-//             <div className="flex items-center space-x-4">
-//               <button
-//                 onClick={() => setDarkMode(!darkMode)}
-//                 className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-//               >
-//                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-//               </button>
-              
-//               <div className="flex items-center space-x-2">
-//                 <Heart className="w-5 h-5 text-red-500" />
-//                 <span className="text-sm">{favorites.length}</span>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </header>
-
-//       {/* Main Content */}
-//       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-//         {/* Search Section */}
-//         <SearchBar 
-//           onSearch={handleSearch}
-//           searchQuery={searchQuery}
-//           searchFilter={searchFilter}
-//           darkMode={darkMode}
-//         />
-
-//         {/* Error Display */}
-//         {error && <ErrorDisplay message={error} darkMode={darkMode} />}
-
-//         {/* Loading State */}
-//         {loading && <LoadingSpinner darkMode={darkMode} />}
-
-//         {/* No Results */}
-//         {!loading && hasSearched && books.length === 0 && !error && (
-//           <div className={`text-center py-12 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-//             <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
-//             <p className="text-lg">No books found. Try a different search term.</p>
-//           </div>
-//         )}
-
-//         {/* Welcome Message */}
-//         {!hasSearched && !loading && (
-//           <div className={`text-center py-16 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-//             <BookOpen className="w-24 h-24 mx-auto mb-6 opacity-30" />
-//             <h2 className="text-3xl font-light mb-4">Welcome to Book Library</h2>
-//             <p className="text-lg">Search for books by title, author, or keyword to get started</p>
-//           </div>
-//         )}
-
-//         {/* Book List */}
-//         {!loading && books.length > 0 && (
-//           <>
-//             <BookList 
-//               books={books} 
-//               onBookClick={setSelectedBook}
-//               onToggleFavorite={toggleFavorite}
-//               isFavorite={isFavorite}
-//               darkMode={darkMode}
-//             />
-            
-//             {/* Pagination */}
-//             {totalPages > 1 && (
-//               <Pagination 
-//                 currentPage={currentPage}
-//                 totalPages={totalPages}
-//                 onPageChange={handlePageChange}
-//                 darkMode={darkMode}
-//               />
-//             )}
-//           </>
-//         )}
-//       </main>
-
-//       {/* Book Details Modal */}
-//       {selectedBook && (
-//         <BookDetails 
-//           book={selectedBook} 
-//           onClose={() => setSelectedBook(null)}
-//           onToggleFavorite={toggleFavorite}
-//           isFavorite={isFavorite(selectedBook.id)}
-//           darkMode={darkMode}
-//         />
-//       )}
-//     </div>
-//   );
-// };
-
-// export default App;
-
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { BookOpen, Sun, Moon, Heart } from 'lucide-react';
-import SearchBar from './components/SearchBar';
-import BookList from './components/BookList';
-import BookDetails from './components/BookDetails';
-import LoadingSpinner from './components/LoadingSpinner';
-import ErrorDisplay from './components/ErrorDisplay';
-import Pagination from './components/Pagination';
+import React, { useState, useEffect, useCallback } from "react";
+import { BookOpen, Sun, Moon, Heart } from "lucide-react";
+import SearchBar from "./components/SearchBar";
+import BookList from "./components/BookList";
+import BookDetails from "./components/BookDetails";
+import LoadingSpinner from "./components/LoadingSpinner";
+import ErrorDisplay from "./components/ErrorDisplay";
+import Pagination from "./components/Pagination";
 
 const App = () => {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedBook, setSelectedBook] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [searchFilter, setSearchFilter] = useState('all');
+  const [searchFilter, setSearchFilter] = useState("all");
   const [darkMode, setDarkMode] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
   const itemsPerPage = 12;
 
   // Default books to show on initial load - with working placeholder images
-const defaultBooks = [
-  {
-    id: '1',
-    volumeInfo: {
-      title: 'To Kill a Mockingbird',
-      authors: ['Harper Lee'],
-      imageLinks: {
-        thumbnail: 'https://covers.openlibrary.org/b/id/8259447-L.jpg'
+  const defaultBooks = [
+    {
+      id: "1",
+      volumeInfo: {
+        title: "To Kill a Mockingbird",
+        authors: ["Harper Lee"],
+        imageLinks: {
+          thumbnail: "https://covers.openlibrary.org/b/id/8259447-L.jpg",
+        },
+        averageRating: 4.8,
+        publishedDate: "1960-07-11",
+        description:
+          "A gripping tale of racial injustice and childhood innocence in the American South.",
       },
-      averageRating: 4.8,
-      publishedDate: '1960-07-11',
-      description: 'A gripping tale of racial injustice and childhood innocence in the American South.'
-    }
-  },
-  {
-    id: '2',
-    volumeInfo: {
-      title: 'The Alchemist',
-      authors: ['Paulo Coelho'],
-      imageLinks: {
-        thumbnail: 'https://covers.openlibrary.org/b/id/8905826-L.jpg'
+    },
+    {
+      id: "2",
+      volumeInfo: {
+        title: "The Alchemist",
+        authors: ["Paulo Coelho"],
+        imageLinks: {
+          thumbnail: "https://covers.openlibrary.org/b/id/8905826-L.jpg",
+        },
+        averageRating: 4.7,
+        publishedDate: "1988-04-25",
+        description:
+          "A mystical story of a shepherd boy's journey to find his Personal Legend.",
       },
-      averageRating: 4.7,
-      publishedDate: '1988-04-25',
-      description: 'A mystical story of a shepherd boy\'s journey to find his Personal Legend.'
-    }
-  },
-  {
-    id: '3',
-    volumeInfo: {
-      title: 'The Little Prince',
-      authors: ['Antoine de Saint-Exupéry'],
-      imageLinks: {
-        thumbnail: 'https://covers.openlibrary.org/b/id/8262993-L.jpg'
+    },
+    {
+      id: "3",
+      volumeInfo: {
+        title: "The Little Prince",
+        authors: ["Antoine de Saint-Exupéry"],
+        imageLinks: {
+          thumbnail: "https://covers.openlibrary.org/b/id/8262993-L.jpg",
+        },
+        averageRating: 4.9,
+        publishedDate: "1943-04-06",
+        description:
+          "A poetic tale about a young prince who visits various planets in space.",
       },
-      averageRating: 4.9,
-      publishedDate: '1943-04-06',
-      description: 'A poetic tale about a young prince who visits various planets in space.'
-    }
-  },
-  
-  {
-    id: '4',
-    volumeInfo: {
-      title: 'The Hobbit',
-      authors: ['J.R.R. Tolkien'],
-      imageLinks: {
-        thumbnail: 'https://covers.openlibrary.org/b/id/6979865-L.jpg'
+    },
+
+    {
+      id: "4",
+      volumeInfo: {
+        title: "The Hobbit",
+        authors: ["J.R.R. Tolkien"],
+        imageLinks: {
+          thumbnail: "https://covers.openlibrary.org/b/id/6979865-L.jpg",
+        },
+        averageRating: 4.8,
+        publishedDate: "1937-09-21",
+        description:
+          "A fantasy novel about Bilbo Baggins and his unexpected journey.",
       },
-      averageRating: 4.8,
-      publishedDate: '1937-09-21',
-      description: 'A fantasy novel about Bilbo Baggins and his unexpected journey.'
-    }
-  },
-  {
-    id: '5',
-    volumeInfo: {
-      title: 'The Da Vinci Code',
-      authors: ['Dan Brown'],
-      imageLinks: {
-        thumbnail: 'https://covers.openlibrary.org/b/id/4431526-L.jpg'
+    },
+    {
+      id: "5",
+      volumeInfo: {
+        title: "The Da Vinci Code",
+        authors: ["Dan Brown"],
+        imageLinks: {
+          thumbnail: "https://covers.openlibrary.org/b/id/4431526-L.jpg",
+        },
+        averageRating: 4.2,
+        publishedDate: "2003-03-18",
+        description:
+          "A mystery thriller that explores secrets hidden in Leonardo da Vinci's works.",
       },
-      averageRating: 4.2,
-      publishedDate: '2003-03-18',
-      description: 'A mystery thriller that explores secrets hidden in Leonardo da Vinci\'s works.'
-    }
-  },
-  {
-    id: '6',
-    volumeInfo: {
-      title: 'The Hunger Games',
-      authors: ['Suzanne Collins'],
-      imageLinks: {
-        thumbnail: 'https://covers.openlibrary.org/b/id/7336975-L.jpg'
+    },
+    {
+      id: "6",
+      volumeInfo: {
+        title: "The Hunger Games",
+        authors: ["Suzanne Collins"],
+        imageLinks: {
+          thumbnail: "https://covers.openlibrary.org/b/id/7336975-L.jpg",
+        },
+        averageRating: 4.5,
+        publishedDate: "2008-09-14",
+        description:
+          "A dystopian novel about a televised battle where only one survivor remains.",
       },
-      averageRating: 4.5,
-      publishedDate: '2008-09-14',
-      description: 'A dystopian novel about a televised battle where only one survivor remains.'
-    }
-  }
-];
+    },
+  ];
   // Load favorites, theme, and default books on mount
   useEffect(() => {
-    const savedFavorites = JSON.parse(sessionStorage.getItem('bookFavorites') || '[]');
-    const savedTheme = sessionStorage.getItem('bookLibraryTheme') === 'dark';
+    const savedFavorites = JSON.parse(
+      sessionStorage.getItem("bookFavorites") || "[]"
+    );
+    const savedTheme = sessionStorage.getItem("bookLibraryTheme") === "dark";
     setFavorites(savedFavorites);
     setDarkMode(savedTheme);
-    
+
     // Set default books on initial load
     setBooks(defaultBooks);
     setTotalItems(defaultBooks.length);
@@ -330,63 +126,68 @@ const defaultBooks = [
 
   // Save favorites to memory
   useEffect(() => {
-    sessionStorage.setItem('bookFavorites', JSON.stringify(favorites));
+    sessionStorage.setItem("bookFavorites", JSON.stringify(favorites));
   }, [favorites]);
 
   // Save theme to memory
   useEffect(() => {
-    sessionStorage.setItem('bookLibraryTheme', darkMode ? 'dark' : 'light');
+    sessionStorage.setItem("bookLibraryTheme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
   // Search books using Google Books API
-  const searchBooks = useCallback(async (query, page = 1, filter = 'all') => {
-    if (!query.trim()) {
-      // If empty search, show default books again
-      setBooks(defaultBooks);
-      setTotalItems(defaultBooks.length);
-      setCurrentPage(1);
-      setHasSearched(false);
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    setHasSearched(true);
-
-    try {
-      let searchTerm = query;
-      if (filter === 'author') {
-        searchTerm = `inauthor:${query}`;
-      } else if (filter === 'title') {
-        searchTerm = `intitle:${query}`;
+  const searchBooks = useCallback(
+    async (query, page = 1, filter = "all") => {
+      if (!query.trim()) {
+        // If empty search, show default books again
+        setBooks(defaultBooks);
+        setTotalItems(defaultBooks.length);
+        setCurrentPage(1);
+        setHasSearched(false);
+        return;
       }
 
-      const startIndex = (page - 1) * itemsPerPage;
-      const response = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchTerm)}&startIndex=${startIndex}&maxResults=${itemsPerPage}&orderBy=relevance`
-      );
+      setLoading(true);
+      setError(null);
+      setHasSearched(true);
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch books');
+      try {
+        let searchTerm = query;
+        if (filter === "author") {
+          searchTerm = `inauthor:${query}`;
+        } else if (filter === "title") {
+          searchTerm = `intitle:${query}`;
+        }
+
+        const startIndex = (page - 1) * itemsPerPage;
+        const response = await fetch(
+          `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+            searchTerm
+          )}&startIndex=${startIndex}&maxResults=${itemsPerPage}&orderBy=relevance`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch books");
+        }
+
+        const data = await response.json();
+        setBooks(data.items || []);
+        setTotalItems(data.totalItems || 0);
+        setCurrentPage(page);
+      } catch (err) {
+        setError(err.message);
+        setBooks([]);
+      } finally {
+        setLoading(false);
       }
-
-      const data = await response.json();
-      setBooks(data.items || []);
-      setTotalItems(data.totalItems || 0);
-      setCurrentPage(page);
-    } catch (err) {
-      setError(err.message);
-      setBooks([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [itemsPerPage]);
+    },
+    [itemsPerPage]
+  );
 
   // Handle search
   const handleSearch = (query, filter = searchFilter) => {
     setSearchQuery(query);
     setSearchFilter(filter);
-    
+
     if (!query.trim()) {
       // Show default books for empty search
       setBooks(defaultBooks);
@@ -413,9 +214,9 @@ const defaultBooks = [
   // Toggle favorite
   const toggleFavorite = (book) => {
     const bookId = book.id;
-    setFavorites(prev => {
-      if (prev.find(fav => fav.id === bookId)) {
-        return prev.filter(fav => fav.id !== bookId);
+    setFavorites((prev) => {
+      if (prev.find((fav) => fav.id === bookId)) {
+        return prev.filter((fav) => fav.id !== bookId);
       } else {
         return [...prev, book];
       }
@@ -424,7 +225,7 @@ const defaultBooks = [
 
   // Check if book is favorite
   const isFavorite = (bookId) => {
-    return favorites.some(fav => fav.id === bookId);
+    return favorites.some((fav) => fav.id === bookId);
   };
 
   // Calculate pagination for default books
@@ -437,30 +238,46 @@ const defaultBooks = [
   };
 
   const totalPages = Math.ceil(
-    searchQuery.trim() ? totalItems / itemsPerPage : defaultBooks.length / itemsPerPage
+    searchQuery.trim()
+      ? totalItems / itemsPerPage
+      : defaultBooks.length / itemsPerPage
   );
 
   const displayedBooks = getPaginatedBooks();
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div
+      className={`min-h-screen transition-colors duration-300 ${
+        darkMode ? "dark bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
+      }`}
+    >
       {/* Header */}
-      <header className={`sticky top-0 z-40 shadow-sm border-b transition-colors duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <header
+        className={`sticky top-0 z-40 shadow-sm border-b transition-colors duration-300 ${
+          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <BookOpen className="w-8 h-8 text-blue-600" />
               <h1 className="text-2xl font-bold">Book Library</h1>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                className={`p-2 rounded-lg transition-colors ${
+                  darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                }`}
               >
-                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {darkMode ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
               </button>
-              
+
               <div className="flex items-center space-x-2">
                 <Heart className="w-5 h-5 text-red-500" />
                 <span className="text-sm">{favorites.length}</span>
@@ -473,7 +290,7 @@ const defaultBooks = [
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Section */}
-        <SearchBar 
+        <SearchBar
           onSearch={handleSearch}
           searchQuery={searchQuery}
           searchFilter={searchFilter}
@@ -488,9 +305,15 @@ const defaultBooks = [
 
         {/* No Results */}
         {!loading && hasSearched && books.length === 0 && !error && (
-          <div className={`text-center py-12 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <div
+            className={`text-center py-12 ${
+              darkMode ? "text-gray-300" : "text-gray-600"
+            }`}
+          >
             <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p className="text-lg">No books found. Try a different search term.</p>
+            <p className="text-lg">
+              No books found. Try a different search term.
+            </p>
           </div>
         )}
 
@@ -498,17 +321,17 @@ const defaultBooks = [
         {!loading && !hasSearched && displayedBooks.length > 0 && (
           <>
             <h2 className="text-2xl font-semibold mb-6">Popular Books</h2>
-            <BookList 
-              books={displayedBooks} 
+            <BookList
+              books={displayedBooks}
               onBookClick={setSelectedBook}
               onToggleFavorite={toggleFavorite}
               isFavorite={isFavorite}
               darkMode={darkMode}
             />
-            
+
             {/* Pagination for default books */}
             {totalPages > 1 && (
-              <Pagination 
+              <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
@@ -522,17 +345,17 @@ const defaultBooks = [
         {!loading && hasSearched && books.length > 0 && (
           <>
             <h2 className="text-2xl font-semibold mb-6">Search Results</h2>
-            <BookList 
-              books={books} 
+            <BookList
+              books={books}
               onBookClick={setSelectedBook}
               onToggleFavorite={toggleFavorite}
               isFavorite={isFavorite}
               darkMode={darkMode}
             />
-            
+
             {/* Pagination for search results */}
             {totalPages > 1 && (
-              <Pagination 
+              <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
@@ -545,8 +368,8 @@ const defaultBooks = [
 
       {/* Book Details Modal */}
       {selectedBook && (
-        <BookDetails 
-          book={selectedBook} 
+        <BookDetails
+          book={selectedBook}
           onClose={() => setSelectedBook(null)}
           onToggleFavorite={toggleFavorite}
           isFavorite={isFavorite(selectedBook.id)}
