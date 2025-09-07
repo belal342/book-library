@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { BookOpen, Sun, Moon, Heart } from "lucide-react";
+import { BookOpen, Sun, Moon, Heart, X } from "lucide-react";
 import SearchBar from "./components/SearchBar";
 import BookList from "./components/BookList";
 import BookDetails from "./components/BookDetails";
@@ -19,6 +19,8 @@ const App = () => {
   const [searchFilter, setSearchFilter] = useState("all");
   const [darkMode, setDarkMode] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [maxAllowedPage] = useState(100);
+  const [view, setView] = useState("featured");
 
   const itemsPerPage = 12;
 
@@ -66,7 +68,6 @@ const App = () => {
           "A poetic tale about a young prince who visits various planets in space.",
       },
     },
-
     {
       id: "4",
       volumeInfo: {
@@ -110,23 +111,50 @@ const App = () => {
       },
     },
   ];
+
   // Load favorites, theme, and default books on mount
   useEffect(() => {
-    const savedFavorites = JSON.parse(
-      sessionStorage.getItem("bookFavorites") || "[]"
-    );
-    const savedTheme = sessionStorage.getItem("bookLibraryTheme") === "dark";
-    setFavorites(savedFavorites);
-    setDarkMode(savedTheme);
+    try {
+      const savedFavorites = JSON.parse(
+        sessionStorage.getItem("bookFavorites") || "[]"
+      );
+      const validFavorites = Array.isArray(savedFavorites) ? savedFavorites : [];
+      setFavorites(validFavorites);
+      
+      const savedTheme = sessionStorage.getItem("bookLibraryTheme") === "dark";
+      setDarkMode(savedTheme);
 
-    // Set default books on initial load
-    setBooks(defaultBooks);
-    setTotalItems(defaultBooks.length);
+      setBooks(defaultBooks);
+      setTotalItems(defaultBooks.length);
+    } catch (error) {
+      console.error("Error loading saved data:", error);
+      setFavorites([]);
+      setBooks(defaultBooks);
+      setTotalItems(defaultBooks.length);
+    }
   }, []);
 
   // Save favorites to memory
   useEffect(() => {
-    sessionStorage.setItem("bookFavorites", JSON.stringify(favorites));
+    try {
+      const serializableFavorites = favorites.map(book => ({
+        id: book.id,
+        volumeInfo: {
+          title: book.volumeInfo?.title,
+          authors: book.volumeInfo?.authors,
+          imageLinks: book.volumeInfo?.imageLinks ? {
+            thumbnail: book.volumeInfo.imageLinks.thumbnail
+          } : undefined,
+          averageRating: book.volumeInfo?.averageRating,
+          publishedDate: book.volumeInfo?.publishedDate,
+          description: book.volumeInfo?.description
+        }
+      }));
+      
+      sessionStorage.setItem("bookFavorites", JSON.stringify(serializableFavorites));
+    } catch (error) {
+      console.error("Error saving favorites:", error);
+    }
   }, [favorites]);
 
   // Save theme to memory
@@ -138,17 +166,24 @@ const App = () => {
   const searchBooks = useCallback(
     async (query, page = 1, filter = "all") => {
       if (!query.trim()) {
-        // If empty search, show default books again
         setBooks(defaultBooks);
         setTotalItems(defaultBooks.length);
         setCurrentPage(1);
         setHasSearched(false);
+        setView("featured");
+        return;
+      }
+
+      if (page > maxAllowedPage) {
+        setError(`Cannot load more than ${maxAllowedPage} pages of results.`);
+        setLoading(false);
         return;
       }
 
       setLoading(true);
       setError(null);
       setHasSearched(true);
+      setView("search");
 
       try {
         let searchTerm = query;
@@ -159,10 +194,12 @@ const App = () => {
         }
 
         const startIndex = (page - 1) * itemsPerPage;
+        const validStartIndex = Math.max(0, startIndex);
+        
         const response = await fetch(
           `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
             searchTerm
-          )}&startIndex=${startIndex}&maxResults=${itemsPerPage}&orderBy=relevance`
+          )}&startIndex=${validStartIndex}&maxResults=${itemsPerPage}&orderBy=relevance`
         );
 
         if (!response.ok) {
@@ -180,7 +217,7 @@ const App = () => {
         setLoading(false);
       }
     },
-    [itemsPerPage]
+    [itemsPerPage, maxAllowedPage]
   );
 
   // Handle search
@@ -189,13 +226,12 @@ const App = () => {
     setSearchFilter(filter);
 
     if (!query.trim()) {
-      // Show default books for empty search
       setBooks(defaultBooks);
       setTotalItems(defaultBooks.length);
       setCurrentPage(1);
       setHasSearched(false);
+      setView("featured");
     } else {
-      // Perform API search for non-empty query
       setCurrentPage(1);
       searchBooks(query, 1, filter);
     }
@@ -203,10 +239,11 @@ const App = () => {
 
   // Handle pagination
   const handlePageChange = (page) => {
-    if (searchQuery.trim()) {
+    if (page < 1 || page > totalPages) return;
+    
+    if (view === "search") {
       searchBooks(searchQuery, page, searchFilter);
     } else {
-      // For default books, just update the page state
       setCurrentPage(page);
     }
   };
@@ -228,19 +265,24 @@ const App = () => {
     return favorites.some((fav) => fav.id === bookId);
   };
 
-  // Calculate pagination for default books
+  // Calculate pagination for current view
   const getPaginatedBooks = () => {
-    if (!searchQuery.trim()) {
+    if (view === "featured") {
       const startIndex = (currentPage - 1) * itemsPerPage;
       return defaultBooks.slice(startIndex, startIndex + itemsPerPage);
+    } else if (view === "favorites") {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      return favorites.slice(startIndex, startIndex + itemsPerPage);
     }
     return books;
   };
 
   const totalPages = Math.ceil(
-    searchQuery.trim()
-      ? totalItems / itemsPerPage
-      : defaultBooks.length / itemsPerPage
+    view === "search" 
+      ? totalItems / itemsPerPage 
+      : view === "featured" 
+        ? defaultBooks.length / itemsPerPage 
+        : favorites.length / itemsPerPage
   );
 
   const displayedBooks = getPaginatedBooks();
@@ -278,10 +320,23 @@ const App = () => {
                 )}
               </button>
 
-              <div className="flex items-center space-x-2">
-                <Heart className="w-5 h-5 text-red-500" />
+              {/* Favorites button to switch views */}
+              <button
+                onClick={() => {
+                  setView(view === "favorites" ? "featured" : "favorites");
+                  setCurrentPage(1);
+                }}
+                className={`p-2 rounded-lg transition-colors flex items-center space-x-2 ${
+                  view === "favorites" 
+                    ? "bg-red-100 text-red-600" 
+                    : darkMode 
+                      ? "hover:bg-gray-700" 
+                      : "hover:bg-gray-100"
+                }`}
+              >
+                <Heart className={`w-5 h-5 ${view === "favorites" ? "fill-current" : ""}`} />
                 <span className="text-sm">{favorites.length}</span>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -289,13 +344,15 @@ const App = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search Section */}
-        <SearchBar
-          onSearch={handleSearch}
-          searchQuery={searchQuery}
-          searchFilter={searchFilter}
-          darkMode={darkMode}
-        />
+        {/* Search Section - Only show when not in favorites view */}
+        {view !== "favorites" && (
+          <SearchBar
+            onSearch={handleSearch}
+            searchQuery={searchQuery}
+            searchFilter={searchFilter}
+            darkMode={darkMode}
+          />
+        )}
 
         {/* Error Display */}
         {error && <ErrorDisplay message={error} darkMode={darkMode} />}
@@ -303,22 +360,56 @@ const App = () => {
         {/* Loading State */}
         {loading && <LoadingSpinner darkMode={darkMode} />}
 
-        {/* No Results */}
-        {!loading && hasSearched && books.length === 0 && !error && (
-          <div
-            className={`text-center py-12 ${
-              darkMode ? "text-gray-300" : "text-gray-600"
-            }`}
-          >
-            <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p className="text-lg">
-              No books found. Try a different search term.
-            </p>
-          </div>
+        {/* Favorites View */}
+        {view === "favorites" && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold">Your Favorites</h2>
+              <button
+                onClick={() => setView("featured")}
+                className={`p-2 rounded-lg ${darkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {favorites.length === 0 ? (
+              <div className={`text-center py-12 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                <Heart className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">You don't have any favorite books yet.</p>
+                <button
+                  onClick={() => setView("featured")}
+                  className="mt-4 text-blue-600 hover:text-blue-800"
+                >
+                  Browse books to add favorites
+                </button>
+              </div>
+            ) : (
+              <>
+                <BookList
+                  books={displayedBooks}
+                  onBookClick={setSelectedBook}
+                  onToggleFavorite={toggleFavorite}
+                  isFavorite={isFavorite}
+                  darkMode={darkMode}
+                />
+
+                {/* Pagination for favorites */}
+                {Math.ceil(favorites.length / itemsPerPage) > 1 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(favorites.length / itemsPerPage)}
+                    onPageChange={handlePageChange}
+                    darkMode={darkMode}
+                  />
+                )}
+              </>
+            )}
+          </>
         )}
 
         {/* Featured Books Section */}
-        {!loading && !hasSearched && displayedBooks.length > 0 && (
+        {!loading && view === "featured" && displayedBooks.length > 0 && (
           <>
             <h2 className="text-2xl font-semibold mb-6">Popular Books</h2>
             <BookList
@@ -342,7 +433,7 @@ const App = () => {
         )}
 
         {/* Search Results */}
-        {!loading && hasSearched && books.length > 0 && (
+        {!loading && view === "search" && books.length > 0 && (
           <>
             <h2 className="text-2xl font-semibold mb-6">Search Results</h2>
             <BookList
@@ -363,6 +454,20 @@ const App = () => {
               />
             )}
           </>
+        )}
+
+        {/* No Results */}
+        {!loading && view === "search" && books.length === 0 && !error && (
+          <div
+            className={`text-center py-12 ${
+              darkMode ? "text-gray-300" : "text-gray-600"
+            }`}
+          >
+            <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-lg">
+              No books found. Try a different search term.
+            </p>
+          </div>
         )}
       </main>
 

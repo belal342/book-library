@@ -5,6 +5,11 @@ const BookCard = ({ book, onClick, onToggleFavorite, isFavorite, darkMode }) => 
   const { volumeInfo } = book;
   const thumbnail = volumeInfo?.imageLinks?.thumbnail || volumeInfo?.imageLinks?.smallThumbnail;
 
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation();
+    onToggleFavorite(book);
+  };
+
   return (
     <div className={`group cursor-pointer rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 ${
       darkMode ? 'bg-gray-800 hover:bg-gray-750' : 'bg-white hover:bg-gray-50'
@@ -26,15 +31,12 @@ const BookCard = ({ book, onClick, onToggleFavorite, isFavorite, darkMode }) => 
         </div>
         
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite();
-          }}
+          onClick={handleFavoriteClick}
           className={`absolute top-2 right-2 p-2 rounded-full transition-all ${
             isFavorite 
-              ? 'bg-red-500 text-white' 
-              : 'bg-white bg-opacity-80 text-gray-700 hover:bg-opacity-100'
-          } opacity-0 group-hover:opacity-100`}
+              ? 'bg-red-500 text-white opacity-100' 
+              : 'bg-white bg-opacity-80 text-gray-700 hover:bg-opacity-100 opacity-0 group-hover:opacity-100'
+          }`}
         >
           <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
         </button>
